@@ -72,16 +72,14 @@ int main(int argc, char* argv[])
     
    for(int i=0;i<pts_src.size();i++){
        cout<<"hellyeah"<<" "<<i<<endl;
-       cout<<pts_src[i]<<" "<<pts_src[i]<<" ";
+       cout<<pts_src[i].x<<" "<<pts_src[i].y<<" ";
    }
    cout<<endl;
 
 
     
 
-     // Wait until user press some key
-     waitKey(0);
-
+     
      
 
 
@@ -113,32 +111,32 @@ int main(int argc, char* argv[])
     // cout<<"hello World";
 
 
-    // // Read destination image.
-    // Mat im_dst = imread("empty.jpg");
-    // // Four corners of the book in destination image.
-    // vector<Point2f> pts_dst;
-    // pts_dst.push_back(Point2f(472,52));
-    // pts_dst.push_back(Point2f(472,830));
-    // pts_dst.push_back(Point2f(800,830));
-    // pts_dst.push_back(Point2f(800,52));
+    // Read destination image.
+    Mat im_dst = imread("empty.jpg");
+    // Four corners of the book in destination image.
+    vector<Point2f> pts_dst;
+    pts_dst.push_back(Point2f(472,52));
+    pts_dst.push_back(Point2f(472,830));
+    pts_dst.push_back(Point2f(800,830));
+    pts_dst.push_back(Point2f(800,52));
 
-    //  cout<<"hello World 3";
+     cout<<"hello World 3";
 
-    // // Calculate Homography
-    // Mat h = findHomography(pts_src, pts_dst);
+    // Calculate Homography
+    Mat h = findHomography(pts_src, pts_dst);
 
-    // // Output image
-    // Mat im_out;
-    // // Warp source image to destination based on homography
-    // cout<<im_dst.size()<<endl;
-    // warpPerspective(im_src, im_out, h, im_dst.size());
+    // Output image
+    Mat im_out;
+    // Warp source image to destination based on homography
+    cout<<im_dst.size()<<endl;
+    warpPerspective(img, im_out, h, im_dst.size());
 
-    // // Display images
-    // imshow("Source Image", im_src);
-    // imshow("Destination Image", im_dst);
-    // imshow("Warped Source Image", im_out);
+    // Display images
+    imshow("Source Image", img);
+    imshow("Destination Image", im_dst);
+    imshow("Warped Source Image", im_out);
 
-    // waitKey(0);
+    waitKey(0);
 
  return 0;
 
