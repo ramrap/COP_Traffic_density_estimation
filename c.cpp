@@ -21,22 +21,7 @@ void CallBackFunc(int event, int x, int y, int flags, void* userdata)
         pts_src.push_back(Point2f(x,y));
           cout << "Left button of the mouse is clicked - position (" << x << ", " << y << ")" <<cnt << endl;
      }
-     else if  ( event == EVENT_RBUTTONDOWN )
-     {
-        //   cout << "Right button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
-        cout<<endl;
-     }
-     else if  ( event == EVENT_MBUTTONDOWN )
-     {
-          cout << "Middle button of the mouse is clicked - position (" << x << ", " << y << ")" << endl;
-          cout<<" "<<endl;
-     }
-     
-     else if ( event == EVENT_MOUSEMOVE )
-     {
-        //   cout << "Mouse move over the window - position (" << x << ", " << y << ")" << endl;
-
-     }
+    
 }
 
 
@@ -77,39 +62,6 @@ int main(int argc, char* argv[])
    cout<<endl;
 
 
-    
-
-     
-     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
- // Read source image.
-    // Mat im_src = imread("empty.jpg");
-    // // Four corners of the book in source image
-    // vector<Point2f> pts_src;
-    // // (472,52),(472,830),(800,830),(800,52)
-    // pts_src.push_back(Point2f(64, 601));
-    // pts_src.push_back(Point2f(141, 131));
-    // pts_src.push_back(Point2f(480, 159));
-    // pts_src.push_back(Point2f(493, 630));
-    
-    // cout<<"hello World";
-
 
     // Read destination image.
     Mat im_dst = imread("empty.jpg");
@@ -126,7 +78,7 @@ int main(int argc, char* argv[])
     Mat h = findHomography(pts_src, pts_dst);
 
     // Output image
-    Mat im_out;
+    Mat im_out,cropped_img;
     // Warp source image to destination based on homography
     cout<<im_dst.size()<<endl;
     warpPerspective(img, im_out, h, im_dst.size());
@@ -135,6 +87,20 @@ int main(int argc, char* argv[])
     imshow("Source Image", img);
     imshow("Destination Image", im_dst);
     imshow("Warped Source Image", im_out);
+
+    
+    
+
+     Rect crop_region(472,52,800-472,830-52);
+     cropped_img=im_out(crop_region);
+
+     imshow("cropped image", cropped_img);
+     imwrite("./WrappedImage.jpg", im_out); 
+     imwrite("./WrappedCroppedImage.jpg", cropped_img); 
+
+  
+   
+    
 
     waitKey(0);
 
