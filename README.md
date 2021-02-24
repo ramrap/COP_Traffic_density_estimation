@@ -9,11 +9,11 @@ To remove the generated .out files
 
 ## Using Command Line
 
-```g++ main.cpp -o main -pthread -std=c++11 `pkg-config --cflags --libs opencv4` ```
+```g++ main.cpp -o main.out -pthread -std=c++11 `pkg-config --cflags --libs opencv4` ```
 ```./main {image_name}```
 
 Example:
-```./main traffic```
+```./main.out traffic```
 
 image_name argument is to be given at command line without the .jpg extension.
 In case argument is missing it will give output " Error loading the image"

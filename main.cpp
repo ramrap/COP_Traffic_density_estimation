@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     //open the video file for reading
     if (argc <= 1)
     {
-        cout << "enter argument as image name also \n ./video \"imageName\" ";
+        cout << "enter argument as image name also \n ./main \"imageName\" ";
     }
     string image_name = argv[1];
     image_name += ".jpg";
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
     imwrite("./cropped.jpg", cropped_img);
 
     // Display images
-    imshow("Source Image", img);
+    // imshow("Source Image", img);
     imshow("Warped Source Image", im_out);
     imshow("cropped image", cropped_img);
 
