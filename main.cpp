@@ -10,6 +10,8 @@ using namespace std;
 int cnt = 0;
 vector<Point2f> pts_src;
 
+
+//for capturing mouse click
 void CallBackFunc(int event, int x, int y, int flags, void *userdata)
 
 {
@@ -83,7 +85,7 @@ int main(int argc, char *argv[])
     imshow("Warped Source Image", im_out);
     imshow("cropped image", cropped_img);
 
-    
+    waitKey(0);
 
     return 0;
 }
