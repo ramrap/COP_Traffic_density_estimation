@@ -10,7 +10,7 @@ using namespace std;
 
 int cnt = 0;
 vector<Point2f> pts_src;
-
+RNG rng(12345);
 
 //for capturing mouse click
 void CallBackFunc(int event, int x, int y, int flags, void *userdata)
@@ -23,10 +23,11 @@ void CallBackFunc(int event, int x, int y, int flags, void *userdata)
         cout << "Point Selected :" << x << ", " << y << ")" << endl;
     }
 }
-void selectpoints(int &cnt){
+void selectpoints(int &cnt)
+{
     Mat img = imread("traffic.jpeg");
 
-       //Create a window
+    //Create a window
     namedWindow("My Window", 1);
 
     //set the callback function for any mouse event
@@ -41,8 +42,9 @@ void selectpoints(int &cnt){
         waitKey(50);
     }
 }
-Mat cropframe(Mat img, Mat h){
-     // Output image
+Mat cropframe(Mat img, Mat h)
+{
+    // Output image
     Mat im_out, cropped_im, cropped_img;
     // Warp source image to destination based on homography
     warpPerspective(img, im_out, h, img.size());
@@ -53,12 +55,12 @@ Mat cropframe(Mat img, Mat h){
     return cropped_img;
 }
 
-void writeSomething(vector<vector<double>>v)
+void writeSomething(vector<vector<double>> v)
 {
     ofstream out;
     out.open("data.csv");
-    for (int i=0; i<v.size();i++)
-        out<< v[i][0]<<","<<v[i][1]<<","<<v[i][2] << endl;
+    for (int i = 0; i < v.size(); i++)
+        out << v[i][0] << "," << v[i][1] << "," << v[i][2] << endl;
 }
 
 int main(int argc, char *argv[])
@@ -73,15 +75,13 @@ int main(int argc, char *argv[])
     VideoCapture vid(video_name);
 
     //if fail to read the image
-    if (vid.isOpened()==false)
+    if (vid.isOpened() == false)
     {
         cout << "Error loading the video" << endl;
         return -1;
     }
     // selecting the points on traffic.jpg
     selectpoints(cnt);
-
-
 
     // Four corners of the book in destination image.
     vector<Point2f> pts_dst;
@@ -90,27 +90,23 @@ int main(int argc, char *argv[])
     pts_dst.push_back(Point2f(800, 830));
     pts_dst.push_back(Point2f(800, 52));
 
-
     // Calculate Homography
     Mat h = findHomography(pts_src, pts_dst);
 
     //Finding the empty frame
-    Mat cropped_empty =cropframe(imread("empty.jpg"),h);
-     
+    Mat cropped_empty = cropframe(imread("empty.jpg"), h);
 
-
-    vector<vector<double> >density;
+    vector<vector<double>> density;
 
     //Capturing frames from the video and finding absdiff
-    Mat frame,prev,dst,cropped;
-    
-    int i = 0;
+    Mat frame, prev, dst, cropped;
 
+    int i = 0;
 
     // while(true){
     //     Mat frame;
     //     vid>>frame;
-        
+
     //     // cout<<i<<endl;
     //     if(i==0){
     //         prev=cropframe(frame,h);
@@ -125,7 +121,6 @@ int main(int argc, char *argv[])
     //         vector<double>frame_density;
     //         frame_density.push_back(i);
 
-            
     //         Mat scoreImg;
     //         double maxScore;
     //         Mat new_cropped_image =cropframe(frame,h);
@@ -150,7 +145,6 @@ int main(int argc, char *argv[])
     //         continue;
     //     }
 
-
     //     char c=(char)waitKey(25);
     //     if(c==27){
     //         cout<<"ESE pressed"<<endl;
@@ -158,57 +152,84 @@ int main(int argc, char *argv[])
     //     }
     // }
 
-
-     while(true){
+    while (true)
+    {
         Mat frame;
-        vid>>frame;
-        
+        vid >> frame;
+
         // cout<<i<<endl;
-        if(i==0){
-            prev=cropframe(frame,h);
+        if (i == 0)
+        {
+            prev = cropframe(frame, h);
             i++;
             continue;
         }
-        if(frame.empty()){
+        if (frame.empty())
+        {
             break;
         }
         i++;
-        if(i%3==0){
-            vector<double>frame_density;
+        if (i % 3 == 0)
+        {
+            vector<double> frame_density;
             frame_density.push_back(i);
 
+            Mat frameDelta, dilated,thresh;
+            vector<vector<Point> > cnts;
+            // double maxScore;
+            Mat new_cropped_image = cropframe(frame, h);
+            absdiff(new_cropped_image, cropped_empty, frameDelta);
+            threshold(frameDelta, thresh, 25, 255, THRESH_BINARY);
+
+            dilate(thresh, thresh, Mat(), Point(-1, -1), 2);
+            findContours(thresh, cnts, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+            imshow("dilated",thresh);
+
+
+            frame_density.push_back(cnts.size());
+
+            absdiff(new_cropped_image, prev, frameDelta);
+            threshold(frameDelta, thresh, 25, 255, THRESH_BINARY);
+
+            dilate(thresh, thresh, Mat(), Point(-1, -1), 2);
+            findContours(thresh, cnts, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+            frame_density.push_back(cnts.size());
             
-            Mat scoreImg,dilated;
-            double maxScore;
-            Mat new_cropped_image =cropframe(frame,h);
-            imshow( "Frame", new_cropped_image );
-            absdiff(new_cropped_image,cropped_empty,scoreImg);
-            dilate(scoreImg,dilated,Mat(), Point(-1, -1), 2, 1, 1);
-            imshow("dilated",dilated);
-            // matchTemplate(new_cropped_image,cropped_empty , scoreImg, TM_CCOEFF_NORMED);
-            // minMaxLoc(scoreImg, 0, &maxScore);
-            frame_density.push_back(1-maxScore);
-
-            cout<<new_cropped_image.size()<<" "<<prev.size()<<endl;
-            Mat scoreImg2;
-            // matchTemplate(new_cropped_image,prev , scoreImg, TM_CCOEFF_NORMED);
-            // minMaxLoc(scoreImg, 0, &maxScore);
-            frame_density.push_back(maxScore);
-
-            density.push_back(frame_density);
+             density.push_back(frame_density);
 
             cout<<frame_density[0]<<" "<<frame_density[1]<<" "<<frame_density[2]<<" \n";
-            prev=new_cropped_image;
 
+           
+
+            // imshow( "Frame", new_cropped_image );
+            // absdiff(new_cropped_image,cropped_empty,scoreImg);
+            // dilate(scoreImg,dilated,Mat(), Point(-1, -1), 2, 1, 1);
+            // imshow("dilated",dilated);
+            // vector<vector<Point> > contours;
+            // vector<Vec4i> hierarchy;
+            // findContours( dilated, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE );
+            // Mat drawing = Mat::zeros( dilated.size(), CV_8UC3 );
+            // for( size_t i = 0; i< contours.size(); i++ )
+            // {
+            //     Scalar color = Scalar( rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256) );
+            //     drawContours( drawing, contours, (int)i, color, 2, LINE_8, hierarchy, 0 );
+            // }
+            // imshow( "Contours", drawing );
+            // matchTemplate(new_cropped_image,cropped_empty , scoreImg, TM_CCOEFF_NORMED);
+            // minMaxLoc(scoreImg, 0, &maxScore);
+
+            prev = new_cropped_image;
         }
-        else{
+        else
+        {
             continue;
         }
 
-
-        char c=(char)waitKey(25);
-        if(c==27){
-            cout<<"ESE pressed"<<endl;
+        char c = (char)waitKey(25);
+        if (c == 27)
+        {
+            cout << "ESE pressed" << endl;
             break;
         }
     }
@@ -223,7 +244,7 @@ int main(int argc, char *argv[])
     //     imshow ("image",dst);
     //     i=i+3;
     // }
-   
+
     waitKey(0);
 
     return 0;
