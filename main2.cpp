@@ -42,12 +42,13 @@ void selectpoints(int cnt){
 }
 Mat cropframe(Mat img, Mat h){
      // Output image
-    Mat im_out, cropped_img;
+    Mat im_out, cropped_im, cropped_img;
     // Warp source image to destination based on homography
     warpPerspective(img, im_out, h, img.size());
 
     Rect crop_region(472, 52, 800 - 472, 830 - 52);
-    cropped_img = im_out(crop_region);
+    cropped_im = im_out(crop_region);
+    cvtColor(cropped_im, cropped_img, COLOR_BGR2GRAY);
     return cropped_img;
 }
 
