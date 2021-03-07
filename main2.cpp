@@ -25,7 +25,7 @@ void CallBackFunc(int event, int x, int y, int flags, void *userdata)
 }
 void selectpoints(int &cnt)
 {
-    Mat img = imread("traffic.jpeg");
+    Mat img = imread("empty.jpg");
 
     //Create a window
     namedWindow("My Window", 1);
@@ -102,137 +102,158 @@ int main(int argc, char *argv[])
     Mat frame, prev, dst, cropped;
 
     int i = 0;
-
-    // while(true){
-    //     Mat frame;
-    //     vid>>frame;
-
-    //     // cout<<i<<endl;
-    //     if(i==0){
-    //         prev=cropframe(frame,h);
-    //         i++;
-    //         continue;
-    //     }
-    //     if(frame.empty()){
-    //         break;
-    //     }
-    //     i++;
-    //     if(i%3==0){
-    //         vector<double>frame_density;
-    //         frame_density.push_back(i);
-
-    //         Mat scoreImg;
-    //         double maxScore;
-    //         Mat new_cropped_image =cropframe(frame,h);
-    //         imshow( "Frame", new_cropped_image );
-    //         matchTemplate(new_cropped_image,cropped_empty , scoreImg, TM_CCOEFF_NORMED);
-    //         minMaxLoc(scoreImg, 0, &maxScore);
-    //         frame_density.push_back(1-maxScore);
-
-    //         cout<<new_cropped_image.size()<<" "<<prev.size()<<endl;
-    //         Mat scoreImg2;
-    //         matchTemplate(new_cropped_image,prev , scoreImg, TM_CCOEFF_NORMED);
-    //         minMaxLoc(scoreImg, 0, &maxScore);
-    //         frame_density.push_back(1-maxScore);
-
-    //         density.push_back(frame_density);
-
-    //         cout<<frame_density[0]<<" "<<frame_density[1]<<" "<<frame_density[2]<<" \n";
-    //         prev=new_cropped_image;
-
-    //     }
-    //     else{
-    //         continue;
-    //     }
-
-    //     char c=(char)waitKey(25);
-    //     if(c==27){
-    //         cout<<"ESE pressed"<<endl;
-    //         break;
-    //     }
-    // }
-
-    while (true)
-    {
+    int n=0;
+    // vid.set(CAP_PROP_POS_FRAMES, 5139);
+    // vid >> frame;
+    // imshow("empty wala frame",frame);
+    // imwrite("./newEmpty.jpg", frame);
+    while(true){
         Mat frame;
-        vid >> frame;
+        vid>>frame;
 
         // cout<<i<<endl;
-        if (i == 0)
-        {
-            prev = cropframe(frame, h);
+        if(i==0){
+            prev=cropframe(frame,h);
             i++;
             continue;
         }
-        if (frame.empty())
-        {
+        if(frame.empty()){
             break;
         }
         i++;
-        if (i % 3 == 0)
-        {
-            vector<double> frame_density;
+        if(i%15==0){
+            vector<double>frame_density;
             frame_density.push_back(i);
 
-            Mat frameDelta, dilated,thresh;
-            vector<vector<Point> > cnts;
-            // double maxScore;
-            Mat new_cropped_image = cropframe(frame, h);
-            absdiff(new_cropped_image, cropped_empty, frameDelta);
-            threshold(frameDelta, thresh, 25, 255, THRESH_BINARY);
+            Mat scoreImg;
+            double maxScore;
+            Mat new_cropped_image =cropframe(frame,h);
+            imshow( "Frame", new_cropped_image );
+            matchTemplate(new_cropped_image,cropped_empty , scoreImg, TM_CCOEFF_NORMED);
+            minMaxLoc(scoreImg, 0, &maxScore);
+            frame_density.push_back(1-maxScore);
 
-            dilate(thresh, thresh, Mat(), Point(-1, -1), 2);
-            findContours(thresh, cnts, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-            imshow("dilated",thresh);
+            // cout<<new_cropped_image.size()<<" "<<prev.size()<<endl;
+            Mat scoreImg2;
+            matchTemplate(new_cropped_image,prev , scoreImg, TM_CCOEFF_NORMED);
+            minMaxLoc(scoreImg, 0, &maxScore);
+            frame_density.push_back(1-maxScore);
+            // if(n){
+            //         if(density[n-1][1]-frame_density[1]>0.05){
+            //             frame_density[1]=density[n-1][1]-0.05;
+            //         }
+            //         else if(density[n-1][1]-frame_density[1]<-0.05){
+            //             frame_density[1]=density[n-1][1]+0.05;
+            //         }
+            //         if(density[n-1][2]-frame_density[2]>0.05){
+            //             frame_density[2]=density[n-1][2]-0.05;
+            //         }
+            //         else if(density[n-1][2]-frame_density[2]<-0.05){
+            //             frame_density[2]=density[n-1][2]+0.05;
+            //         }
 
 
-            frame_density.push_back(cnts.size());
-
-            absdiff(new_cropped_image, prev, frameDelta);
-            threshold(frameDelta, thresh, 25, 255, THRESH_BINARY);
-
-            dilate(thresh, thresh, Mat(), Point(-1, -1), 2);
-            findContours(thresh, cnts, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-
-            frame_density.push_back(cnts.size());
+            // }
+            density.push_back(frame_density);
             
-             density.push_back(frame_density);
+            // n++;
 
             cout<<frame_density[0]<<" "<<frame_density[1]<<" "<<frame_density[2]<<" \n";
+            prev=new_cropped_image;
 
-           
-
-            // imshow( "Frame", new_cropped_image );
-            // absdiff(new_cropped_image,cropped_empty,scoreImg);
-            // dilate(scoreImg,dilated,Mat(), Point(-1, -1), 2, 1, 1);
-            // imshow("dilated",dilated);
-            // vector<vector<Point> > contours;
-            // vector<Vec4i> hierarchy;
-            // findContours( dilated, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE );
-            // Mat drawing = Mat::zeros( dilated.size(), CV_8UC3 );
-            // for( size_t i = 0; i< contours.size(); i++ )
-            // {
-            //     Scalar color = Scalar( rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256) );
-            //     drawContours( drawing, contours, (int)i, color, 2, LINE_8, hierarchy, 0 );
-            // }
-            // imshow( "Contours", drawing );
-            // matchTemplate(new_cropped_image,cropped_empty , scoreImg, TM_CCOEFF_NORMED);
-            // minMaxLoc(scoreImg, 0, &maxScore);
-
-            prev = new_cropped_image;
         }
-        else
-        {
+        else{
             continue;
         }
 
-        char c = (char)waitKey(25);
-        if (c == 27)
-        {
-            cout << "ESE pressed" << endl;
+        char c=(char)waitKey(25);
+        if(c==27){
+            cout<<"ESE pressed"<<endl;
             break;
         }
     }
+
+    // while (true)
+    // {
+    //     Mat frame;
+    //     vid >> frame;
+
+    //     // cout<<i<<endl;
+    //     if (i == 0)
+    //     {
+    //         prev = cropframe(frame, h);
+    //         i++;
+    //         continue;
+    //     }
+    //     if (frame.empty())
+    //     {
+    //         break;
+    //     }
+    //     i++;
+    //     if (i % 3 == 0)
+    //     {
+    //         vector<double> frame_density;
+    //         frame_density.push_back(i);
+
+    //         Mat frameDelta, dilated,thresh;
+    //         vector<vector<Point> > cnts;
+    //         // double maxScore;
+    //         Mat new_cropped_image = cropframe(frame, h);
+    //         absdiff(new_cropped_image, cropped_empty, frameDelta);
+    //         threshold(frameDelta, thresh, 25, 255, THRESH_BINARY);
+
+    //         dilate(thresh, thresh, Mat(), Point(-1, -1), 2);
+    //         findContours(thresh, cnts, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+    //         imshow("dilated",thresh);
+
+
+    //         frame_density.push_back(cnts.size());
+
+    //         absdiff(new_cropped_image, prev, frameDelta);
+    //         threshold(frameDelta, thresh, 25, 255, THRESH_BINARY);
+
+    //         dilate(thresh, thresh, Mat(), Point(-1, -1), 2);
+    //         findContours(thresh, cnts, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+    //         frame_density.push_back(cnts.size());
+            
+    //          density.push_back(frame_density);
+
+    //         cout<<frame_density[0]<<" "<<frame_density[1]<<" "<<frame_density[2]<<" \n";
+
+           
+
+    //         // imshow( "Frame", new_cropped_image );
+    //         // absdiff(new_cropped_image,cropped_empty,scoreImg);
+    //         // dilate(scoreImg,dilated,Mat(), Point(-1, -1), 2, 1, 1);
+    //         // imshow("dilated",dilated);
+    //         // vector<vector<Point> > contours;
+    //         // vector<Vec4i> hierarchy;
+    //         // findContours( dilated, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE );
+    //         // Mat drawing = Mat::zeros( dilated.size(), CV_8UC3 );
+    //         // for( size_t i = 0; i< contours.size(); i++ )
+    //         // {
+    //         //     Scalar color = Scalar( rng.uniform(0, 256), rng.uniform(0,256), rng.uniform(0,256) );
+    //         //     drawContours( drawing, contours, (int)i, color, 2, LINE_8, hierarchy, 0 );
+    //         // }
+    //         // imshow( "Contours", drawing );
+    //         // matchTemplate(new_cropped_image,cropped_empty , scoreImg, TM_CCOEFF_NORMED);
+    //         // minMaxLoc(scoreImg, 0, &maxScore);
+
+    //         prev = new_cropped_image;
+    //     }
+    //     else
+    //     {
+    //         continue;
+    //     }
+
+    //     char c = (char)waitKey(25);
+    //     if (c == 27)
+    //     {
+    //         cout << "ESE pressed" << endl;
+    //         break;
+    //     }
+    // }
 
     writeSomething(density);
     // while (i<200){
