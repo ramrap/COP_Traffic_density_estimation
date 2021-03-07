@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
     //         Mat scoreImg2;
     //         matchTemplate(new_cropped_image,prev , scoreImg, TM_CCOEFF_NORMED);
     //         minMaxLoc(scoreImg, 0, &maxScore);
-    //         frame_density.push_back(maxScore);
+    //         frame_density.push_back(1-maxScore);
 
     //         density.push_back(frame_density);
 
