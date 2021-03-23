@@ -1,12 +1,14 @@
-all:
+
+# Add the following 'help' target to your Makefile
+# And add help text after each target name starting with '\#\#'
+ 
+help:           ## Show this help.
+	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
+ 
+build:    ## TO BUILD COMMAND
 	g++ main.cpp -o main.out -pthread -std=c++11 `pkg-config --cflags --libs opencv4`
-clean:
+clean:   ## Clean everything
 	rm *.out
 
-# For testing on one device	
-temp:
-	sudo g++ main.cpp -o main.out -pthread -std=c++11 `pkg-config --cflags --libs opencv4`
-
-#change empty to image name
-build:
+emp: ##change empty to image name
 	./main.out empty
