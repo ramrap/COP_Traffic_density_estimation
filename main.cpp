@@ -1,6 +1,3 @@
-//Uncomment the following line if you are compiling this code in Visual Studio
-//#include "stdafx.h"
-
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <fstream>
@@ -63,40 +60,8 @@ void writeSomething(vector<vector<double>> v)
         out << v[i][0] << "," << v[i][1] << "," << v[i][2] << endl;
 }
 
-int main(int argc, char *argv[])
-{
-    //open the video file for reading
-    if (argc <= 1)
-    {
-        cout << "enter argument as image name also \n ./main \"VideoName\" ";
-    }
-    string video_name = argv[1];
-    video_name += ".mp4";
-    VideoCapture vid(video_name);
-
-    //if fail to read the image
-    if (vid.isOpened() == false)
-    {
-        cout << "Error loading the video" << endl;
-        return -1;
-    }
-    // selecting the points on traffic.jpg
-    selectpoints(cnt);
-
-    // Four corners of the book in destination image.
-    vector<Point2f> pts_dst;
-    pts_dst.push_back(Point2f(472, 52));
-    pts_dst.push_back(Point2f(472, 830));
-    pts_dst.push_back(Point2f(800, 830));
-    pts_dst.push_back(Point2f(800, 52));
-
-    // Calculate Homography
-    Mat h = findHomography(pts_src, pts_dst);
-
-    //Finding the empty frame
-    Mat cropped_empty = cropframe(imread("empty.jpg"), h);
-
-    vector<vector<double>> density;
+void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid){
+     vector<vector<double>> density;
 
     //Capturing frames from the video and finding absdiff
     Mat frame, prev, dst, cropped;
@@ -132,35 +97,17 @@ int main(int argc, char *argv[])
             matchTemplate(new_cropped_image,cropped_empty , scoreImg, TM_CCOEFF_NORMED);
             minMaxLoc(scoreImg, 0, &maxScore);
             frame_density.push_back(1-maxScore);
-
-            // cout<<new_cropped_image.size()<<" "<<prev.size()<<endl;
             Mat scoreImg2;
             matchTemplate(new_cropped_image,prev , scoreImg, TM_CCOEFF_NORMED);
             minMaxLoc(scoreImg, 0, &maxScore);
             frame_density.push_back(1-maxScore);
-            // if(n){
-            //         if(density[n-1][1]-frame_density[1]>0.05){
-            //             frame_density[1]=density[n-1][1]-0.05;
-            //         }
-            //         else if(density[n-1][1]-frame_density[1]<-0.05){
-            //             frame_density[1]=density[n-1][1]+0.05;
-            //         }
-            //         if(density[n-1][2]-frame_density[2]>0.05){
-            //             frame_density[2]=density[n-1][2]-0.05;
-            //         }
-            //         else if(density[n-1][2]-frame_density[2]<-0.05){
-            //             frame_density[2]=density[n-1][2]+0.05;
-            //         }
-
-
-            // }
+            
             density.push_back(frame_density);
             
             // n++;
 
             cout<<frame_density[0]<<" "<<frame_density[1]<<" "<<frame_density[2]<<" \n";
             prev=new_cropped_image;
-
         }
         else{
             continue;
@@ -172,7 +119,46 @@ int main(int argc, char *argv[])
             break;
         }
     }
+    writeSomething(density);
 
+}
+int main(int argc, char *argv[])
+{
+    //open the video file for reading
+    if (argc <= 1)
+    {
+        cout << "enter argument as image name also \n ./main \"VideoName\" ";
+    }
+    string video_name = argv[1];
+    video_name += ".mp4";
+    VideoCapture vid(video_name);
+
+    //if fail to read the image
+    if (vid.isOpened() == false)
+    {
+        cout << "Error loading the video" << endl;
+        return -1;
+    }
+    // selecting the points on traffic.jpg
+    selectpoints(cnt);
+
+    // Four corners of the book in destination image.
+    vector<Point2f> pts_dst;
+    pts_dst.push_back(Point2f(472, 52));
+    pts_dst.push_back(Point2f(472, 830));
+    pts_dst.push_back(Point2f(800, 830));
+    pts_dst.push_back(Point2f(800, 52));
+
+    // Calculate Homography
+    Mat h = findHomography(pts_src, pts_dst);
+
+    //Finding the empty frame
+    Mat cropped_empty = cropframe(imread("empty.jpg"), h);
+
+
+    imageSubtraction(h,cropped_empty,vid);
+
+   
     // while (true)
     // {
     //     Mat frame;
@@ -255,7 +241,7 @@ int main(int argc, char *argv[])
     //     }
     // }
 
-    writeSomething(density);
+    
     // while (i<200){
     //     vid.set(CAP_PROP_POS_FRAMES, i);
     //     vid >> frame;
