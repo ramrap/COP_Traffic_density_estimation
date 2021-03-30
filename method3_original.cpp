@@ -15,11 +15,11 @@ RNG rng(12345);
 struct Thread_Struct
 {
     Mat emp;
-    string videoName;
+    Mat cur;
     vector<double> density;
+    int ind;
     int start;
     int total;
-    Mat h;
 };
 
 //for capturing mouse click
@@ -65,7 +65,7 @@ Mat cropframe(Mat img, Mat h)
     return cropped_img;
 }
 
-void writeSomething(vector<vector<double>> v, string s)
+void writeSomething(vector<vector<double>> v,string s)
 {
     ofstream out;
     out.open(s);
@@ -85,74 +85,46 @@ void *thread_run(void *arg)
 {
     struct Thread_Struct *arg_st =
         (struct Thread_Struct *)arg;
-    // Mat new_cropped_image = arg_st->cur;
-    Mat cropped_empty = arg_st->emp, frame, h = arg_st->h;
+    Mat new_cropped_image = arg_st->cur, cropped_empty = arg_st->emp;
     vector<double> density;
     density = arg_st->density;
 
-    int thread_num = arg_st->start, total_thread = arg_st->total;
+    int start = arg_st->start, end = arg_st->total;
+    int ind = arg_st->ind;
+    int length = new_cropped_image.cols / end;
+    double staticCount = 0;
 
-    string videoName = arg_st->videoName;
-
-    VideoCapture vid(videoName);
-    int frame_num = 0;
-    int img_size=cropped_empty.rows*cropped_empty.cols;
-
-    int i=0;
-    while (true)
+    for (int i = 0; i < new_cropped_image.rows; i++)
     {
-        if (frame_num % 100 == 0)
+        for (int j = start * length; j < (start + 1) * length; j++)
         {
-            cout << thread_num << " " << frame_num << endl;
-        }
-
-        vid >> frame;
-
-        if (frame.empty())
-        {
-            break;
-        }
-        if (frame_num % total_thread == thread_num)
-        {
-            double staticCount = 0;
-            Mat new_cropped_image = cropframe(frame, h);
-            for (int i = 0; i < new_cropped_image.rows; i++)
+            float cur_pix = new_cropped_image.at<uchar>(i, j);
+            float back_pix = cropped_empty.at<uchar>(i, j);
+            if (abs(cur_pix - back_pix) > 25)
             {
-                for (int j = 0; j < new_cropped_image.cols; j++)
-                {
-                    float cur_pix = new_cropped_image.at<uchar>(i, j);
-                    float back_pix = cropped_empty.at<uchar>(i, j);
-                    if (abs(cur_pix - back_pix) > 25)
-                    {
-                        staticCount++;
-                    }
-                }
+                staticCount++;
             }
-            // cout<<i<<" "<<thread_num<<endl;
-            density[i] = staticCount/img_size;
-            i++;
         }
-
-        frame_num++;
     }
-    cout<<"denisty intialise before"<<endl;
+    double val = staticCount;
+
+    density[ind] = val;
     arg_st->density = density;
-    cout<<"density after"<<endl;
+
     pthread_exit(0);
 }
 
-void imageSubtraction(Mat h, Mat cropped_empty, VideoCapture vi, int NUM_THREADS, string videoName, int size_video)
+void imageSubtraction(Mat h, Mat cropped_empty, VideoCapture vi, int NUM_THREADS, string videoName,int size_video)
 {
     Mat frame, prev, dst, cropped;
 
+    
     VideoCapture vid(videoName);
 
     pthread_t tids[NUM_THREADS];
     vector<int> first(NUM_THREADS, 0);
-
-    vector<double> density(size_video / NUM_THREADS + 10, 0);
-
-    cout<<"size: "<<size_video / NUM_THREADS + 10<<endl;
+    vector<vector<double>> vec;
+    vector<double> density(size_video, 0);
 
     vector<Thread_Struct> alpha;
 
@@ -160,51 +132,91 @@ void imageSubtraction(Mat h, Mat cropped_empty, VideoCapture vi, int NUM_THREADS
     {
         Thread_Struct arg = {
             cropped_empty,
-            videoName,
+            cropped_empty,
             density,
+            0,
             i,
-            NUM_THREADS,
-            h};
+            NUM_THREADS};
         alpha.push_back(arg);
     }
-    int frame_size = cropped_empty.rows * cropped_empty.cols;
+    int size = cropped_empty.rows * cropped_empty.cols;
 
+    //first iteration
+    vid >> frame;
+    Mat new_cropped_image = cropframe(frame, h);
     for (int j = 0; j < NUM_THREADS; j++)
     {
 
         pthread_attr_t attr;
-        // alpha[j].ind = 0;
+        alpha[j].cur = new_cropped_image;
+        alpha[j].ind = 0;
         pthread_attr_init(&attr);
         pthread_create(&tids[j], &attr, thread_run, &alpha[j]);
     }
+
+    int i = 1;
+    while (true)
+    {
+        if(i==100){
+            break;
+        }
+
+        Mat frame;
+        vid >> frame;
+        if (frame.empty())
+        {
+            break;
+        }
+        Mat new_cropped_image = cropframe(frame, h);
+
+        for (int j = 0; j < NUM_THREADS; j++)
+        {
+            pthread_join(tids[j], NULL);
+
+            pthread_attr_t attr;
+            alpha[j].cur = new_cropped_image;
+            alpha[j].ind = i;
+            pthread_attr_init(&attr);
+            pthread_create(&tids[j], &attr, thread_run, &alpha[j]);
+        }
+
+        vector<double> v;
+        v.push_back(i - 1);
+        double val = 0;
+        for (int j = 0; j < NUM_THREADS; j++)
+        {
+            val += alpha[j].density[i - 1];
+        }
+
+        val /= size;
+        v.push_back(val);
+
+        vec.push_back(v);
+        i++;
+    }
+
+    //last iteration
+    vector<double> v;
+    v.push_back(i - 1);
+    double val = 0;
     for (int j = 0; j < NUM_THREADS; j++)
     {
         pthread_join(tids[j], NULL);
+        val += alpha[j].density[i - 1];
     }
-    vector<vector<double>> vec;
+    val /= size;
+    cout << i - 1 << " " << val << endl;
+    v.push_back(val);
+    vec.push_back(v);
 
-    for (int i = 0; i < size_video/NUM_THREADS+5; i++)
-    {
-        
-        
-        for (int j = 0; j < NUM_THREADS; j++)
-        {
-            vector<double> v;
-            cout<<alpha[j].density[i]<<" ";
-            v.push_back(i*NUM_THREADS+j);
-            v.push_back(alpha[j].density[i]);
-            vec.push_back(v);
-            // cout<<i*NUM_THREADS+j<<" "<<vec.size()<<" "<<v[1]<<endl;
-        }
-        cout<<endl;
-        
-    }
+    
+    writeSomething(vec,"data.csv");
 
-    writeSomething(vec, "data.csv");
+    
 }
 int main(int argc, char *argv[])
 {
-
+    
     string video_name = argv[1];
     video_name += ".mp4";
     VideoCapture vid(video_name);
@@ -245,43 +257,42 @@ int main(int argc, char *argv[])
         size_video++;
     }
 
-    if (NUM_THREADS)
-    {
+    if(NUM_THREADS){
         auto start = high_resolution_clock::now();
 
-        imageSubtraction(h, cropped_empty, vid, NUM_THREADS, video_name, size_video); //last parameter is size of video
+        imageSubtraction(h, cropped_empty, vid, NUM_THREADS, video_name,size_video);
 
         auto stop = high_resolution_clock::now();
 
         auto duration = duration_cast<microseconds>(stop - start);
 
-        cout << "Time taken by function with threads " << NUM_THREADS << ": "
+        cout << "Time taken by function with threads "<<NUM_THREADS<<": "
              << duration.count() << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
+
     }
-    else
+    else{
+        vector<vector<double> >data;
+    for (int i = 1; i <= 100; i++)
     {
-        vector<vector<double>> data;
-        for (int i = 1; i <= 10; i++)
-        {
-            auto start = high_resolution_clock::now();
+        auto start = high_resolution_clock::now();
 
-            imageSubtraction(h, cropped_empty, vid, i, video_name, size_video //sizevideo
-            );
+        imageSubtraction(h, cropped_empty, vid, i, video_name,size_video);
 
-            auto stop = high_resolution_clock::now();
+        auto stop = high_resolution_clock::now();
 
-            auto duration = duration_cast<microseconds>(stop - start);
+        auto duration = duration_cast<microseconds>(stop - start);
 
-            cout << "Time taken by function with threads " << i << ": "
-                 << duration.count() << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
+        cout << "Time taken by function with threads "<<i<<": "
+             << duration.count() << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
 
-            vector<double> temp;
-            temp.push_back(i);
-            temp.push_back(duration.count());
-        }
-        writeSomething(data, "Method4.csv");
+        vector<double>temp;
+        temp.push_back(i);temp.push_back(duration.count());
+        
+    }
+    writeSomething(data,"Method3.csv");
     }
 
+   
     exit(1);
 
     waitKey(0);

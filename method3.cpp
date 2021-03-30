@@ -2,7 +2,9 @@
 #include <iostream>
 #include <fstream>
 #include <pthread.h>
+#include <chrono>
 
+using namespace std::chrono;
 using namespace cv;
 using namespace std;
 
@@ -10,14 +12,14 @@ int cnt = 0;
 vector<Point2f> pts_src;
 RNG rng(12345);
 
-
-struct Thread_Struct{
+struct Thread_Struct
+{
     Mat emp;
-    Mat cur;
-    vector<double>density;
-    int ind;
+    string videoName;
+    vector<double> density;
     int start;
     int total;
+    Mat h;
 
 };
 
@@ -64,10 +66,10 @@ Mat cropframe(Mat img, Mat h)
     return cropped_img;
 }
 
-void writeSomething(vector<vector<double>> v)
+void writeSomething(vector<vector<double>> v,string s)
 {
     ofstream out;
-    out.open("data.csv");
+    out.open(s);
     for (int i = 0; i < v.size(); i++)
         out << v[i][0] << "," << v[i][1] << endl;
 }
@@ -75,271 +77,127 @@ void writeSomething(vector<vector<double>> v)
 Mat reduce_ImgSize(Mat inImg, double scale)
 {
     Mat dst;
-
-    // Creating the Size object
     resize(inImg, dst, cv::Size(inImg.cols * scale, inImg.rows * scale), 0, 0, INTER_LINEAR);
 
     return dst;
 }
 
-void* thread_run(void* arg)
-    {
-        
-	struct Thread_Struct *arg_st =
-			(struct Thread_Struct*) arg;
-    // cout<<"HELLO :"<<arg_st->ind<<endl;
-    Mat new_cropped_image=arg_st->cur ,  cropped_empty = arg_st->emp;
-    vector<double>density ;
-    density= arg_st->density;
-    
-
-    int start = arg_st->start,end= arg_st->total;
-    int ind = arg_st->ind;
-
-    int length= new_cropped_image.cols/end;
-        double staticCount=0;
-            for(int i=0; i<new_cropped_image.rows ;i++){
-                for(int j=start*length; j< (start+1)*length  ;j++){
-                    float cur_pix = new_cropped_image.at<uchar>(i,j);
-                    float back_pix = cropped_empty.at<uchar>(i,j);
-                    if(abs(cur_pix-back_pix)>25){
-                        staticCount++;
-                    }
-                    
-                }
-            }
-        // cout<<arg_st<<endl;
-        double val=staticCount;
-
-        density[ind]=val;
-        // cout<<ind<<" "<<val<<endl;
-        // cout<<"density assign ke phele \n";
-    arg_st->density=density;
-    // cout<<"density assigned after \n";
-    
-
-	pthread_exit(0);
-}
-
-void imageSubtraction(Mat h, Mat cropped_empty, VideoCapture vi, int NUM_THREADS,string videoName)
+void *thread_run(void *arg)
 {
-    // vector<vector<double>> density;
+    struct Thread_Struct *arg_st =
+        (struct Thread_Struct *)arg;
+    // Mat new_cropped_image = arg_st->cur;
+    Mat cropped_empty = arg_st->emp,frame,h = arg_st->h;
+    vector<double> density;
+    density = arg_st->density;
 
-    //Capturing frames from the video and finding absdiff
-    Mat frame, prev, dst, cropped;
+    int start = arg_st->start, end = arg_st->total;
 
-
-    int size_video=5736;
-    // while(true){
-    //     Mat frame;
-    //     vi>>frame;
-    //     if(frame.empty()){
-    //         break;
-    //     }
-    //     cout<<size_video<<endl;
-    //     size_video++;
-    // }
+    int length = cropped_empty.cols / end;
+    string videoName = arg_st->videoName;
+    
     VideoCapture vid(videoName);
+    int frame_num=0;
 
-    pthread_t tids[NUM_THREADS];
-    vector<int>first(NUM_THREADS,0);
-    vector<vector<double> >vec;
-    vector<double> density (size_video,0);
-
-    vector<Thread_Struct> alpha;
-
-    for(int i=0;i<NUM_THREADS;i++){
-        Thread_Struct arg={
-            cropped_empty,
-            cropped_empty,
-            density,
-            0,
-            i,
-            NUM_THREADS
-            };
-        alpha.push_back(arg);
-    }
-    int size=cropped_empty.rows*cropped_empty.cols;
-
-
-    //first iteration
-    vid>>frame;
-    Mat new_cropped_image = cropframe(frame, h);
-    for(int j=0;j<NUM_THREADS;j++){
-
-            pthread_attr_t attr;
-            alpha[j].cur = new_cropped_image;
-            alpha[j].ind = 0;
-		    pthread_attr_init(&attr);
-            pthread_create(&tids[j], &attr, thread_run, &alpha[j]);
+    while(true){
+        if(frame_num%100==0){
+            cout<<start<<" "<<frame_num<<endl;
+        }
+        if(frame_num==1000){
+            break;
         }
 
-
-    int i=1;
-    while(true){
-        Mat frame;
         vid >> frame;
-        if (frame.empty())
+
+         if (frame.empty())
         {
             break;
         }
+        double staticCount = 0; 
         Mat new_cropped_image = cropframe(frame, h);
-
-        for(int j=0;j<NUM_THREADS;j++){
-            pthread_join(tids[j], NULL);
-
-            pthread_attr_t attr;
-            alpha[j].cur = new_cropped_image;
-            alpha[j].ind = i;
-		    pthread_attr_init(&attr);
-            pthread_create(&tids[j], &attr, thread_run, &alpha[j]);
+         for (int i = 0; i < new_cropped_image.rows; i++)
+        {
+        for (int j = start * length; j < (start + 1) * length; j++)
+        {
+            float cur_pix = new_cropped_image.at<uchar>(i, j);
+            float back_pix = cropped_empty.at<uchar>(i, j);
+            if (abs(cur_pix - back_pix) > 25)
+            {
+                staticCount++;
+            }
         }
+        }
+        density[frame_num]=staticCount;
+        // cout<<start<<" - "<<frame_num<<"--"<<staticCount<<"\n";
+        frame_num++;
+    }
+    arg_st->density=density;
 
+    pthread_exit(0);
+}
 
+void imageSubtraction(Mat h, Mat cropped_empty, VideoCapture vi, int NUM_THREADS, string videoName,int size_video)
+{
+    Mat frame, prev, dst, cropped;
 
+    
+    VideoCapture vid(videoName);
+
+    pthread_t tids[NUM_THREADS];
+    vector<int> first(NUM_THREADS, 0);
+    
+    vector<double> density(size_video, 0);
+
+    vector<Thread_Struct> alpha;
+
+    for (int i = 0; i < NUM_THREADS; i++)
+    {
+        Thread_Struct arg = {
+            cropped_empty,
+            videoName,
+            density,
+            i,
+            NUM_THREADS,
+            h};
+        alpha.push_back(arg);
+    }
+    int frame_size = cropped_empty.rows * cropped_empty.cols;
+
+    
+    for (int j = 0; j < NUM_THREADS; j++)
+    {
+
+        pthread_attr_t attr;
+        // alpha[j].ind = 0;
+        pthread_attr_init(&attr);
+        pthread_create(&tids[j], &attr, thread_run, &alpha[j]);
+    }
+    for (int j = 0; j < NUM_THREADS; j++)
+    {
+        pthread_join(tids[j], NULL);
+    }
+    vector<vector<double>> vec;
+    
+    for(int i=0;i<size_video;i++){
         vector<double>v;
-        v.push_back(i-1);
+        v.push_back(i);
         double val=0;
-        for(int j=0;j<NUM_THREADS;j++){
-            val+=alpha[j].density[i-1];
+        for (int j = 0; j < NUM_THREADS; j++)
+        {
+            val+=alpha[j].density[i];
         }
-        
-        val/=size;
-        cout<<i-1<<" "<<val<<endl;
-        v.push_back(val);
-
+        v.push_back(val/frame_size);
+        cout<<i<<" "<<v[1]<<endl;
         vec.push_back(v);
-        i++;
-
-
-
     }
 
-
-    //last iteration
-        vector<double>v;
-        v.push_back(i-1);
-        double val=0;
-        for(int j=0;j<NUM_THREADS;j++){
-            pthread_join(tids[j], NULL);
-            val+=alpha[j].density[i-1];
-        }
-        val/=size;
-        cout<<i-1<<" "<<val<<endl;
-        v.push_back(val);
-        vec.push_back(v);
-    
-    
-    // int i=0;
-    // while(true){
-    //     Mat frame;
-    //     vid >> frame;
-    //     // cout<<i<<endl;
-    //     if (frame.empty())
-    //     {
-    //         break;
-    //     }
-    //     int thread_num= i%NUM_THREADS;
-
-    //     Mat new_cropped_image = cropframe(frame, h);
-        
-    //     cout<<thread_num<<endl;
-    //     if(first[thread_num]==0){
-    //         first[thread_num]++;
-    //         pthread_attr_t attr;
-    //         alpha[thread_num].cur = new_cropped_image;
-    //         alpha[thread_num].ind = i;
-	// 	    pthread_attr_init(&attr);
-    //         // cout<<"HELLO"<<endl;
-    //         pthread_create(&tids[thread_num], &attr, thread_run, &alpha[thread_num]);
-            
-    //     }
-    //     else{
-
-    //         cout<<thread_num<<" thread Joined \n";
-    //         pthread_join(tids[thread_num], NULL);
-
-    //         pthread_attr_t attr;
-	// 	    // cout<<"---attr printed"<<endl;
-    //         alpha[thread_num].cur = new_cropped_image;
-    //         alpha[thread_num].ind = i;
-	// 	    pthread_attr_init(&attr);
-    //         // cout<<"attr modified"<<endl;
-    //         // cout<<"HELLO"<<endl;
-    //         pthread_create(&tids[thread_num], &attr, thread_run, &alpha[thread_num]);
-    //     }
-    //     i++;
-    // }
-
-    writeSomething(vec);
-    
-    
+    writeSomething(vec,"data.csv");
 
     
-// vector<double > temp= 
-
-
-    // while (true)
-    // {
-    //     Mat frame;
-    //     vid >> frame;
-    //     // cout<<i<<endl;
-    //     if (frame.empty())
-    //     {
-    //         break;
-    //     }
-    //     // vector<double> frame_density;
-    //     // frame_density.push_back(i);
-    //     int thread_num= i%NUM_THREADS;
-
-
-
-    //     Mat new_cropped_image = cropframe(frame, h);
-    //     Thread_Struct arg={
-    //         cropped_empty,
-    //         new_cropped_image,
-    //         0,
-    //         i
-    //         };
-        
-    //     density_struct.push_back(arg);
-    //     cout<<i<<" "<<density_struct.size()<<endl;
-    //     if(first[i]){
-    //         pthread_attr_t attr;
-	// 	    pthread_attr_init(&attr);
-    //         cout<<"HELLO"<<endl;
-    //         pthread_create(&tids[thread_num], &attr, thread_run, &density_struct[i-1]);
-    //         first[i]=0;
-    //     }
-    //     else{
-    //         cout<<thread_num<<" thread Joined \n";
-    //         pthread_join(tids[thread_num], NULL);
-
-    //         pthread_attr_t attr;
-	// 	    pthread_attr_init(&attr);
-    //         pthread_create(&tids[thread_num], &attr, thread_run, &density_struct[i-1]);
-
-    //     }
-    
-    //     int size = new_cropped_image.rows * new_cropped_image.cols;
-        
-    //     char c = (char)waitKey(25);
-    //     if (c == 27)
-    //     {
-    //         cout << "ESE pressed" << endl;
-    //         break;
-    //     }
-    //     i++;
-    // }
-    // // writeSomething(density);
 }
 int main(int argc, char *argv[])
 {
-    //open the video file for reading
-    // if (argc <2)
-    // {
-    //     cout << "enter argument as image name also \n ./main \"VideoName\" ";
-    // }
+    
     string video_name = argv[1];
     video_name += ".mp4";
     VideoCapture vid(video_name);
@@ -367,18 +225,56 @@ int main(int argc, char *argv[])
     //Finding the empty frame
     Mat cropped_empty = cropframe(imread("empty.jpg"), h);
 
-    // cropped_empty=reduce_ImgSize(cropped_empty);
+    int size_video = 5736;
+    while (false)
+    {
+        Mat frame;
+        vid >> frame;
+        if (frame.empty())
+        {
+            break;
+        }
+        // cout << size_video << endl;
+        size_video++;
+    }
 
-    time_t start, end;
-    time(&start);
+    if(NUM_THREADS){
+        auto start = high_resolution_clock::now();
 
-    imageSubtraction(h, cropped_empty, vid, NUM_THREADS,video_name);
+        imageSubtraction(h, cropped_empty, vid, NUM_THREADS, video_name,1000); //last parameter is size of video
 
-    time(&end);
-    double time_taken = double(end - start);
-    cout << "Time taken by program is : " << fixed
-         << time_taken << setprecision(5);
-    cout << " sec " << endl;
+        auto stop = high_resolution_clock::now();
+
+        auto duration = duration_cast<microseconds>(stop - start);
+
+        cout << "Time taken by function with threads "<<NUM_THREADS<<": "
+             << duration.count() << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
+
+    }
+    else{
+        vector<vector<double> >data;
+    for (int i = 1; i <= 10; i++)
+    {
+        auto start = high_resolution_clock::now();
+
+        imageSubtraction(h, cropped_empty, vid, i, video_name, 1000 //sizevideo
+        );
+
+        auto stop = high_resolution_clock::now();
+
+        auto duration = duration_cast<microseconds>(stop - start);
+
+        cout << "Time taken by function with threads "<<i<<": "
+             << duration.count() << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
+
+        vector<double>temp;
+        temp.push_back(i);temp.push_back(duration.count());
+        
+    }
+    writeSomething(data,"Method3.csv");
+    }
+
+   
     exit(1);
 
     waitKey(0);
