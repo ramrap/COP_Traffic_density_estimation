@@ -81,7 +81,7 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid, int x){
 
         // cout<<i<<endl;
         if(i==0){
-            prev=cropframe(frame,h);
+            prev=cropped_empty;
             i++;
             continue;
         }
@@ -89,8 +89,8 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid, int x){
             y= false;
             break;
         }
-        i++;
-        if(i%x==0){
+
+        if(i%x==1){
             vector<double>frame_density;
             frame_density.push_back(i);
 
@@ -119,19 +119,19 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid, int x){
             cout<<frame_density[0]<<" "<<frame_density[1]<<" "<<frame_density[2]<<" \n";
             
             for (int j = 0; j<x ; j++){
+                if (i+j<=5736){
                 frame_density.at(0)= i+j;
                 density.push_back(frame_density);
             }
-            
-            // n++;
-
-            
+            }
             prev=new_cropped_image;
+            i++;
         }
         else{
+            i++;
             continue;
         }
-
+        
         char c=(char)waitKey(25);
         if(c==27){
             cout<<"ESE pressed"<<endl;
@@ -168,6 +168,12 @@ int main(int argc, char *argv[])
     pts_dst.push_back(Point2f(800, 830));
     pts_dst.push_back(Point2f(800, 52));
 
+    vector<Point2f> pts_ds;
+    pts_ds.push_back(Point2f(947, 280));
+    pts_ds.push_back(Point2f(468, 1065));
+    pts_ds.push_back(Point2f(1542, 1066));
+    pts_ds.push_back(Point2f(1296, 269));
+
     // Calculate Homography
     Mat h = findHomography(pts_src, pts_dst);
 
@@ -176,16 +182,16 @@ int main(int argc, char *argv[])
 
         auto start = high_resolution_clock::now();
 
-        imageSubtraction(h,cropped_empty,vid,x);
+        imageSubtraction(h,cropped_empty,vid,x+1);
 
         auto stop = high_resolution_clock::now();
 
         auto duration = duration_cast<microseconds>(stop - start);
 
-        cout << "Time taken by function with frame lapse of  "<<x<<"frames : "
+        cout << "Time taken by function with frame lapse of  "<<x<<" frames : "
              << duration.count() << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
 
-
+    exit(1);
     waitKey(0);
     
     return 0;
