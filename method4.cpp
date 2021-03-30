@@ -11,6 +11,7 @@ using namespace std;
 int cnt = 0;
 vector<Point2f> pts_src;
 RNG rng(12345);
+vector<Mat> cropped_frame_vec;
 
 struct Thread_Struct
 {
@@ -99,38 +100,12 @@ void *thread_run(void *arg)
     int img_size=cropped_empty.rows*cropped_empty.cols;
 
     int i=0;
-    while (true)
-    {
-        if (frame_num % 100 == 0)
-        {
-            cout << thread_num << " " << frame_num << endl;
-        }
-
-        vid >> frame;
-
-        if (frame.empty())
-        {
-            break;
-        }
-        if (frame_num % total_thread == thread_num)
-        {
-            double staticCount = 0;
-
-            Mat im_out, cropped_im, cropped_img;
-            // Warp source image to destination based on homography
-            warpPerspective(frame, im_out, h, frame.size());
-
-            Rect crop_region(472, 52, 800 - 472, 830 - 52);
-            cropped_im = im_out(crop_region);
-            cvtColor(cropped_im, cropped_img, COLOR_BGR2GRAY);
-
-            Mat new_cropped_image = cropped_img;
-
-
-
-
-
-            for (int i = 0; i < new_cropped_image.rows; i++)
+    for(frame_num=thread_num;frame_num<cropped_frame_vec.size();frame_num+=total_thread){
+        
+        cout<<thread_num<<" "<<frame_num<<endl;
+        double staticCount = 0;
+        Mat new_cropped_image = cropped_frame_vec[frame_num];
+         for (int i = 0; i < new_cropped_image.rows; i++)
             {
                 for (int j = 0; j < new_cropped_image.cols; j++)
                 {
@@ -145,11 +120,11 @@ void *thread_run(void *arg)
             // cout<<i<<" "<<thread_num<<endl;
             density[i] = staticCount/img_size;
             i++;
-        }
-
-        frame_num++;
+  
     }
-    cout<<"denisty intialise before"<<endl;
+    
+
+    cout<<"Before updated density \n";
     arg_st->density = density;
     cout<<"density after"<<endl;
     pthread_exit(0);
@@ -231,7 +206,7 @@ int main(int argc, char *argv[])
         return -1;
     }
     // selecting the points on traffic.jpg
-    selectpoints(cnt);
+    // selectpoints(cnt);
 
     // Four corners of the book in destination image.
     vector<Point2f> pts_dst;
@@ -240,14 +215,22 @@ int main(int argc, char *argv[])
     pts_dst.push_back(Point2f(800, 830));
     pts_dst.push_back(Point2f(800, 52));
 
+    vector<Point2f> pts_ds;
+    pts_ds.push_back(Point2f(947, 280));
+    pts_ds.push_back(Point2f(468, 1065));
+    pts_ds.push_back(Point2f(1542, 1066));
+    pts_ds.push_back(Point2f(1296, 269));
+
     // Calculate Homography
-    Mat h = findHomography(pts_src, pts_dst);
+    Mat h = findHomography(pts_ds, pts_dst);
+
 
     //Finding the empty frame
     Mat cropped_empty = cropframe(imread("empty.jpg"), h);
 
-    int size_video = 5736;
-    while (false)
+    int size_video = 0;
+    auto start = high_resolution_clock::now();
+    while (true)
     {
         Mat frame;
         vid >> frame;
@@ -255,9 +238,19 @@ int main(int argc, char *argv[])
         {
             break;
         }
+        Mat new_cropped_image = cropframe(frame, h);
+
+        cropped_frame_vec.push_back(new_cropped_image);
+        // i++;
+        cout<<"vector :"<<cropped_frame_vec.size()<<endl;
         // cout << size_video << endl;
         size_video++;
     }
+    auto stop = high_resolution_clock::now();
+
+    auto duration = duration_cast<microseconds>(stop - start);
+    double start_time = duration.count();
+
 
     if (NUM_THREADS)
     {
@@ -270,7 +263,7 @@ int main(int argc, char *argv[])
         auto duration = duration_cast<microseconds>(stop - start);
 
         cout << "Time taken by function with threads " << NUM_THREADS << ": "
-             << duration.count() << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
+             << int(duration.count() + start_time)<< " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
     }
     else
     {
@@ -287,11 +280,11 @@ int main(int argc, char *argv[])
             auto duration = duration_cast<microseconds>(stop - start);
 
             cout << "Time taken by function with threads " << i << ": "
-                 << duration.count() << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
+                 << duration.count()+start_time << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
 
             vector<double> temp;
             temp.push_back(i);
-            temp.push_back(duration.count());
+            temp.push_back(duration.count()+start_time);
             data.push_back(temp);
         }
         writeSomething(data, "Method4.csv");

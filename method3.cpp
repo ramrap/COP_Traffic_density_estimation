@@ -216,7 +216,7 @@ int main(int argc, char *argv[])
         return -1;
     }
     // selecting the points on traffic.jpg
-    selectpoints(cnt);
+    // selectpoints(cnt);
 
     // Four corners of the book in destination image.
     vector<Point2f> pts_dst;
@@ -225,8 +225,14 @@ int main(int argc, char *argv[])
     pts_dst.push_back(Point2f(800, 830));
     pts_dst.push_back(Point2f(800, 52));
 
+    vector<Point2f> pts_ds;
+    pts_ds.push_back(Point2f(947, 280));
+    pts_ds.push_back(Point2f(468, 1065));
+    pts_ds.push_back(Point2f(1542, 1066));
+    pts_ds.push_back(Point2f(1296, 269));
+
     // Calculate Homography
-    Mat h = findHomography(pts_src, pts_dst);
+    Mat h = findHomography(pts_ds, pts_dst);
 
     //Finding the empty frame
     Mat cropped_empty = cropframe(imread("empty.jpg"), h);
