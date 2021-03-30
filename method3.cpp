@@ -11,6 +11,7 @@ using namespace std;
 int cnt = 0;
 vector<Point2f> pts_src;
 RNG rng(12345);
+vector<Mat> cropped_frame_vec;
 
 struct Thread_Struct
 {
@@ -99,22 +100,13 @@ void *thread_run(void *arg)
     VideoCapture vid(videoName);
     int frame_num=0;
 
-    while(true){
+    for(frame_num=0;frame_num<cropped_frame_vec.size();frame_num++){
         if(frame_num%100==0){
             cout<<start<<" "<<frame_num<<endl;
         }
-        if(frame_num==1000){
-            break;
-        }
-
-        vid >> frame;
-
-         if (frame.empty())
-        {
-            break;
-        }
+        
         double staticCount = 0; 
-        Mat new_cropped_image = cropframe(frame, h);
+        Mat new_cropped_image = cropped_frame_vec[frame_num];
          for (int i = 0; i < new_cropped_image.rows; i++)
         {
         for (int j = start * length; j < (start + 1) * length; j++)
@@ -129,7 +121,7 @@ void *thread_run(void *arg)
         }
         density[frame_num]=staticCount;
         // cout<<start<<" - "<<frame_num<<"--"<<staticCount<<"\n";
-        frame_num++;
+        
     }
     arg_st->density=density;
 
@@ -143,12 +135,26 @@ void imageSubtraction(Mat h, Mat cropped_empty, VideoCapture vi, int NUM_THREADS
     
     VideoCapture vid(videoName);
 
+    int i=0;
+    // while(true){
+    //     vid>>frame;
+    //     if(frame.empty()){
+    //         break;
+    //     }
+    //     Mat new_cropped_image = cropframe(frame, h);
+
+    //     cropped_frame_vec.push_back(new_cropped_image);
+    //     i++;
+    //     cout<<"vector :"<<i<<endl;
+    // }
+
     pthread_t tids[NUM_THREADS];
     vector<int> first(NUM_THREADS, 0);
     
     vector<double> density(size_video, 0);
 
     vector<Thread_Struct> alpha;
+
 
     for (int i = 0; i < NUM_THREADS; i++)
     {
@@ -178,7 +184,7 @@ void imageSubtraction(Mat h, Mat cropped_empty, VideoCapture vi, int NUM_THREADS
     }
     vector<vector<double>> vec;
     
-    for(int i=0;i<size_video;i++){
+    for(int i=0;i<cropped_frame_vec.size();i++){
         vector<double>v;
         v.push_back(i);
         double val=0;
@@ -187,7 +193,7 @@ void imageSubtraction(Mat h, Mat cropped_empty, VideoCapture vi, int NUM_THREADS
             val+=alpha[j].density[i];
         }
         v.push_back(val/frame_size);
-        cout<<i<<" "<<v[1]<<endl;
+        // cout<<i<<" "<<v[1]<<endl;
         vec.push_back(v);
     }
 
@@ -225,8 +231,9 @@ int main(int argc, char *argv[])
     //Finding the empty frame
     Mat cropped_empty = cropframe(imread("empty.jpg"), h);
 
-    int size_video = 5736;
-    while (false)
+    int size_video = 0;
+    auto start = high_resolution_clock::now();
+    while (true)
     {
         Mat frame;
         vid >> frame;
@@ -234,21 +241,31 @@ int main(int argc, char *argv[])
         {
             break;
         }
+        Mat new_cropped_image = cropframe(frame, h);
+
+        cropped_frame_vec.push_back(new_cropped_image);
+        // i++;
+        cout<<"vector :"<<cropped_frame_vec.size()<<endl;
         // cout << size_video << endl;
         size_video++;
     }
+    auto stop = high_resolution_clock::now();
+
+    auto duration = duration_cast<microseconds>(stop - start);
+    double start_time = duration.count();
+
 
     if(NUM_THREADS){
         auto start = high_resolution_clock::now();
 
-        imageSubtraction(h, cropped_empty, vid, NUM_THREADS, video_name,1000); //last parameter is size of video
+        imageSubtraction(h, cropped_empty, vid, NUM_THREADS, video_name,size_video); //last parameter is size of video
 
         auto stop = high_resolution_clock::now();
 
         auto duration = duration_cast<microseconds>(stop - start);
 
         cout << "Time taken by function with threads "<<NUM_THREADS<<": "
-             << duration.count() << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
+             << duration.count() + start_time << " microseconds/ "  << endl;
 
     }
     else{
@@ -257,7 +274,7 @@ int main(int argc, char *argv[])
     {
         auto start = high_resolution_clock::now();
 
-        imageSubtraction(h, cropped_empty, vid, i, video_name, 1000 //sizevideo
+        imageSubtraction(h, cropped_empty, vid, i, video_name, size_video //sizevideo
         );
 
         auto stop = high_resolution_clock::now();
@@ -265,12 +282,17 @@ int main(int argc, char *argv[])
         auto duration = duration_cast<microseconds>(stop - start);
 
         cout << "Time taken by function with threads "<<i<<": "
-             << duration.count() << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
+             << duration.count() +start_time<< " microseconds/ "  << endl;
 
         vector<double>temp;
-        temp.push_back(i);temp.push_back(duration.count());
+        int al=int(duration.count()+start_time) ;
+        cout<<al<<endl;
+        temp.push_back(i);temp.push_back(al);
+        data.push_back(temp);
+        cout<<data.size()<<endl;
         
     }
+
     writeSomething(data,"Method3.csv");
     }
 
