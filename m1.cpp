@@ -1,7 +1,9 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <fstream>
+#include <chrono>
 
+using namespace std::chrono;
 using namespace cv;
 using namespace std;
 
@@ -52,12 +54,12 @@ Mat cropframe(Mat img, Mat h)
     return cropped_img;
 }
 
-void writeSomething(vector<vector<double>> v)
+void writeSomething(vector<vector<double>> v,string s)
 {
     ofstream out;
-    out.open("data.csv");
+    out.open(s);
     for (int i = 0; i < v.size(); i++)
-        out << v[i][0] << "," << v[i][1] << "," << v[i][2] << endl;
+        out << v[i][0] << "," << v[i][1]<< "," << v[i][2] << endl;
 }
 
 void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid, int x){
@@ -92,17 +94,29 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid, int x){
             vector<double>frame_density;
             frame_density.push_back(i);
 
-            Mat scoreImg;
-            double maxScore;
             Mat new_cropped_image =cropframe(frame,h);
-            imshow( "Frame", new_cropped_image );
-            matchTemplate(new_cropped_image,cropped_empty , scoreImg, TM_CCOEFF_NORMED);
-            minMaxLoc(scoreImg, 0, &maxScore);
-            frame_density.push_back(1-maxScore);
-            Mat scoreImg2;
-            matchTemplate(new_cropped_image,prev , scoreImg, TM_CCOEFF_NORMED);
-            minMaxLoc(scoreImg, 0, &maxScore);
-            frame_density.push_back(1-maxScore);
+
+            int count =0;
+            double staticCount=0, dynamicCount=0;
+            for(int i=0; i<new_cropped_image.rows ;i++){
+                for(int j=0; j< new_cropped_image.cols ;j++){
+                    float cur_pix = new_cropped_image.at<uchar>(i,j);
+                    float last_pix= prev.at<uchar>(i,j);
+                    float back_pix = cropped_empty.at<uchar>(i,j);
+
+                    if(abs(cur_pix-back_pix)>25){
+                        staticCount++;
+                    }
+                    if(abs(cur_pix-last_pix)>25){
+                        dynamicCount++;
+                    } 
+                }
+            }
+            int size=new_cropped_image.rows*new_cropped_image.cols;
+            frame_density.push_back(staticCount/size);
+            frame_density.push_back(dynamicCount/size);
+            //density.push_back(frame_density);
+            cout<<frame_density[0]<<" "<<frame_density[1]<<" "<<frame_density[2]<<" \n";
             
             for (int j = 0; j<x ; j++){
                 frame_density.at(0)= i+j;
@@ -111,7 +125,7 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid, int x){
             
             // n++;
 
-            cout<<frame_density[0]<<" "<<frame_density[1]<<" "<<frame_density[2]<<" \n";
+            
             prev=new_cropped_image;
         }
         else{
@@ -124,8 +138,7 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid, int x){
             break;
         }
     }
-    writeSomething(density);
-
+        writeSomething(density, "a.csv");
 }
 int main(int argc, char *argv[])
 {
@@ -161,10 +174,19 @@ int main(int argc, char *argv[])
     //Finding the empty frame
     Mat cropped_empty = cropframe(imread("empty.jpg"), h);
 
+        auto start = high_resolution_clock::now();
 
-    imageSubtraction(h,cropped_empty,vid,x);
+        imageSubtraction(h,cropped_empty,vid,x);
+
+        auto stop = high_resolution_clock::now();
+
+        auto duration = duration_cast<microseconds>(stop - start);
+
+        cout << "Time taken by function with frame lapse of  "<<x<<"frames : "
+             << duration.count() << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
+
 
     waitKey(0);
-
+    
     return 0;
 }
