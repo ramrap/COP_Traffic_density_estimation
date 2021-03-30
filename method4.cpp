@@ -115,7 +115,21 @@ void *thread_run(void *arg)
         if (frame_num % total_thread == thread_num)
         {
             double staticCount = 0;
-            Mat new_cropped_image = cropframe(frame, h);
+
+            Mat im_out, cropped_im, cropped_img;
+            // Warp source image to destination based on homography
+            warpPerspective(frame, im_out, h, frame.size());
+
+            Rect crop_region(472, 52, 800 - 472, 830 - 52);
+            cropped_im = im_out(crop_region);
+            cvtColor(cropped_im, cropped_img, COLOR_BGR2GRAY);
+
+            Mat new_cropped_image = cropped_img;
+
+
+
+
+
             for (int i = 0; i < new_cropped_image.rows; i++)
             {
                 for (int j = 0; j < new_cropped_image.cols; j++)
@@ -278,6 +292,7 @@ int main(int argc, char *argv[])
             vector<double> temp;
             temp.push_back(i);
             temp.push_back(duration.count());
+            data.push_back(temp);
         }
         writeSomething(data, "Method4.csv");
     }
