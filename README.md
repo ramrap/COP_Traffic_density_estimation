@@ -1,22 +1,65 @@
 ## Using Makefile
-```make all```
 
-To compile your .cpp files
+
+```make main```
+For running baseline code
+
+## For Method 1
+
+```make m1```
+
+To run method one then run
+
+```./m1.out video_name parameter(Number of frames to be skipped)```
+
+## For Method 2
+
+```make m2```
+
+To run method one then run \n
+
+```./m2.out video_name scale```
+
+Here Scale is the factor by which we have to reduce the frame resolution \n
+
+## For Method 3
+
+```make m3```
+
+To run method one then run \n
+
+```./m3.out video_name Number_of_threads```
+
+## For Method 4
+
+```make m4```
+
+To run method one then run \n
+
+```./m4.out video_name Number_of_threads```
+
+
+For detail information about make command See MakeFile
+
+For Method 3 and 4 if Num_of_threads = 0 then code will run autonomously for all threads from 1 to 10
+
 
 ```make clean```
 
-To remove the generated .out files
+Use this command to clean/remove all .out files 
 
-## Using Command Line
 
-```g++ main.cpp -o main.out -pthread -std=c++11 `pkg-config --cflags --libs opencv4` ```
-```./main {image_name}```
 
-Example:
-```./main.out traffic```
 
-image_name argument is to be given at command line without the .jpg extension.
-In case argument is missing it will give output " Error loading the image"
 
-It will make user able to select 4 pts on the image according to whichc image will be warped and finally cropped
-Both the images will get saved in the same folder.
+
+
+
+
+
+
+
+
+
+
+
