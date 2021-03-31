@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
     pts_ds.push_back(Point2f(1296, 269));
 
     // Calculate Homography
-    Mat h = findHomography(pts_ds, pts_dst);
+    Mat h = findHomography(pts_src, pts_dst);
 
     //Finding the empty frame
     Mat cropped_empty = cropframe(imread("empty.jpg"), h);
