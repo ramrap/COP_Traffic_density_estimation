@@ -138,7 +138,8 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid, int x){
             break;
         }
     }
-        writeSomething(density, "a.csv");
+    string s="m1_"+to_string(x)+".csv";
+    writeSomething(density, s);
 }
 int main(int argc, char *argv[])
 {
