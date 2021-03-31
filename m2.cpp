@@ -60,7 +60,7 @@ void writeSomething(vector<vector<double>> v,string s)
     ofstream out;
     out.open(s);
     for (int i = 0; i < v.size(); i++)
-        out << v[i][0] << "," << v[i][1]<< endl;
+        out << v[i][0] << "," << v[i][1]<< "," << v[i][2]<< endl;
 }
 
 Mat reduce_ImgSize(Mat inImg,double scale){
@@ -87,14 +87,14 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid,double scale){
 
         // cout<<i<<endl;
         if(i==0){
-            prev=cropframe(frame,h);
+            prev=cropped_empty;
             i++;
             continue;
         }
         if(frame.empty()){
             break;
         }
-        i++;
+        
         if(i%1==0){
 
             vector<double>frame_density;
@@ -125,20 +125,19 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid,double scale){
             density.push_back(frame_density);
             //density.push_back(frame_density);
             cout<<frame_density[0]<<" "<<frame_density[1]<<" "<<frame_density[2]<<" \n";
-           
             prev=new_cropped_image;
         }
         else{
             continue;
         }
-
+        i++;
         char c=(char)waitKey(25);
         if(c==27){
             cout<<"ESE pressed"<<endl;
             break;
         }
     }
-    writeSomething(density, "b.csv");
+    writeSomething(density, "a.csv");
 }
 int main(int argc, char *argv[])
 {
@@ -161,7 +160,7 @@ int main(int argc, char *argv[])
         return -1;
     }
     // selecting the points on traffic.jpg
-    selectpoints(cnt);
+    //selectpoints(cnt);
 
     // Four corners of the book in destination image.
     vector<Point2f> pts_dst;
@@ -170,6 +169,12 @@ int main(int argc, char *argv[])
     pts_dst.push_back(Point2f(800, 830));
     pts_dst.push_back(Point2f(800, 52));
 
+     vector<Point2f> pts_ds;
+    pts_ds.push_back(Point2f(947, 280));
+    pts_ds.push_back(Point2f(468, 1065));
+    pts_ds.push_back(Point2f(1542, 1066));
+    pts_ds.push_back(Point2f(1296, 269));
+
     // Calculate Homography
     Mat h = findHomography(pts_src, pts_dst);
 
@@ -177,9 +182,8 @@ int main(int argc, char *argv[])
     
 
     // cropped_empty=reduce_ImgSize(cropped_empty,scale);
-    double i = 0.1;
         Mat cropped_empty = cropframe(imread("empty.jpg"), h);
-        cropped_empty=reduce_ImgSize(cropped_empty,i);
+        cropped_empty=reduce_ImgSize(cropped_empty,scale);
         auto start = high_resolution_clock::now();
 
         imageSubtraction(h, cropped_empty, vid, scale);
@@ -191,7 +195,7 @@ int main(int argc, char *argv[])
         cout << "Time taken by function with scale down "<<scale<<": "
              << duration.count() << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
 
-
+    exit(1);
     waitKey(0);
 
     return 0;
