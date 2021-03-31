@@ -144,7 +144,9 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid,double scale){
         }
     }
     //writing the values in a file
-    string s ="m2_" + to_string(scale*10)+".csv";
+    double r = scale*10;
+    int e = (int)r;
+    string s ="m2_" + to_string(e)+".csv";
     writeSomething(density,s);
 }
 int main(int argc, char *argv[])
