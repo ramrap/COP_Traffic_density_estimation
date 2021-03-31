@@ -22,6 +22,7 @@ void CallBackFunc(int event, int x, int y, int flags, void *userdata)
         cout << "Point Selected :" << x << ", " << y << ")" << endl;
     }
 }
+// for selecting points on the empty image
 void selectpoints(int &cnt)
 {
     Mat img = imread("empty.jpg");
@@ -41,6 +42,7 @@ void selectpoints(int &cnt)
         waitKey(50);
     }
 }
+// to crop the frame according to the homography
 Mat cropframe(Mat img, Mat h)
 {
     // Output image
@@ -53,7 +55,7 @@ Mat cropframe(Mat img, Mat h)
     cvtColor(cropped_im, cropped_img, COLOR_BGR2GRAY);
     return cropped_img;
 }
-
+// to write the output in a csv file 
 void writeSomething(vector<vector<double>> v,string s)
 {
     ofstream out;
@@ -65,26 +67,23 @@ void writeSomething(vector<vector<double>> v,string s)
 void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid, int x){
      vector<vector<double>> density;
 
-    //Capturing frames from the video and finding absdiff
+    //Capturing frames from the video
     Mat frame, prev, dst, cropped;
 
     int i = 0;
     int n=0;
-    // vid.set(CAP_PROP_POS_FRAMES, 5139);
-    // vid >> frame;
-    // imshow("empty wala frame",frame);
-    // imwrite("./newEmpty.jpg", frame);
     bool y = true;
     while(y){
         Mat frame;
         vid>>frame;
 
-        // cout<<i<<endl;
+        //checking for the first frame
         if(i==0){
             prev=cropped_empty;
             i++;
             continue;
         }
+        // checking for end of video
         if(frame.empty()){
             y= false;
             break;
@@ -93,9 +92,11 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid, int x){
         if(i%x==1){
             vector<double>frame_density;
             frame_density.push_back(i);
-
+            
+            //cropping the frame
             Mat new_cropped_image =cropframe(frame,h);
 
+            //iterating over the frame to get the value of counts
             int count =0;
             double staticCount=0, dynamicCount=0;
             for(int i=0; i<new_cropped_image.rows ;i++){
@@ -112,10 +113,11 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid, int x){
                     } 
                 }
             }
+            //dividing count by size to get density values
             int size=new_cropped_image.rows*new_cropped_image.cols;
             frame_density.push_back(staticCount/size);
             frame_density.push_back(dynamicCount/size);
-            //density.push_back(frame_density);
+            
             cout<<frame_density[0]<<" "<<frame_density[1]<<" "<<frame_density[2]<<" \n";
             
             for (int j = 0; j<x ; j++){
@@ -131,14 +133,14 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid, int x){
             i++;
             continue;
         }
-        
+        //check if escape key is pressed
         char c=(char)waitKey(25);
         if(c==27){
             cout<<"ESE pressed"<<endl;
             break;
         }
     }
-    string s="m1_"+to_string(x)+".csv";
+    string s="m1_"+to_string(x-1)+".csv";
     writeSomething(density, s);
 }
 int main(int argc, char *argv[])
@@ -151,6 +153,11 @@ int main(int argc, char *argv[])
     string video_name = argv[1];
     video_name += ".mp4";
     int x = stoi(argv[2]);
+    //checking if x>0
+    if (x<=0){
+        cout <<" argument should be greater than 0"<<endl;
+        return -1;
+    }
     VideoCapture vid(video_name);
 
     //if fail to read the image
@@ -159,7 +166,7 @@ int main(int argc, char *argv[])
         cout << "Error loading the video" << endl;
         return -1;
     }
-    // selecting the points on traffic.jpg
+    // selecting the points on empty.jpg
     selectpoints(cnt);
 
     // Four corners of the book in destination image.
@@ -169,6 +176,7 @@ int main(int argc, char *argv[])
     pts_dst.push_back(Point2f(800, 830));
     pts_dst.push_back(Point2f(800, 52));
 
+    // points to check for hardcoded value
     vector<Point2f> pts_ds;
     pts_ds.push_back(Point2f(947, 280));
     pts_ds.push_back(Point2f(468, 1065));
@@ -181,15 +189,19 @@ int main(int argc, char *argv[])
     //Finding the empty frame
     Mat cropped_empty = cropframe(imread("empty.jpg"), h);
 
-        auto start = high_resolution_clock::now();
+    //starting the clock
+    auto start = high_resolution_clock::now();
 
-        imageSubtraction(h,cropped_empty,vid,x+1);
+    //caling subtraction function
+    imageSubtraction(h,cropped_empty,vid,x+1);
 
-        auto stop = high_resolution_clock::now();
+    //stopping the clock
+    auto stop = high_resolution_clock::now();
 
-        auto duration = duration_cast<microseconds>(stop - start);
+    // finding duration
+    auto duration = duration_cast<microseconds>(stop - start);
 
-        cout << "Time taken by function with frame lapse of  "<<x<<" frames : "
+    cout << "Time taken by function with frame lapse of  "<<x<<" frames : "
              << duration.count() << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
 
     exit(1);
