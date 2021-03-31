@@ -1,9 +1,8 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <fstream>
-#include <chrono>
 
-using namespace std::chrono;
+
 using namespace cv;
 using namespace std;
 
@@ -55,12 +54,12 @@ Mat cropframe(Mat img, Mat h)
 }
 
 
-void writeSomething(vector<vector<double>> v,string s)
+void writeSomething(vector<vector<double>> v)
 {
     ofstream out;
-    out.open(s);
+    out.open("data.csv");
     for (int i = 0; i < v.size(); i++)
-        out << v[i][0] << "," << v[i][1]<< "," << v[i][2]<< endl;
+        out << v[i][0] << "," << v[i][1] << "," << v[i][2] << endl;
 }
 
 Mat reduce_ImgSize(Mat inImg,double scale){
@@ -72,7 +71,7 @@ Mat reduce_ImgSize(Mat inImg,double scale){
 
       return dst;
 }
-void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid,double scale){
+void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid){
      vector<vector<double>> density;
 
     //Capturing frames from the video and finding absdiff
@@ -96,12 +95,10 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid,double scale){
         }
         
         if(i%1==0){
-
             vector<double>frame_density;
             frame_density.push_back(i);
 
             Mat new_cropped_image =cropframe(frame,h);
-            new_cropped_image=reduce_ImgSize(new_cropped_image,scale);
 
             int count =0;
             double staticCount=0, dynamicCount=0;
@@ -123,7 +120,7 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid,double scale){
             frame_density.push_back(staticCount/size);
             frame_density.push_back(dynamicCount/size);
             density.push_back(frame_density);
-            //density.push_back(frame_density);
+            
             cout<<frame_density[0]<<" "<<frame_density[1]<<" "<<frame_density[2]<<" \n";
             prev=new_cropped_image;
         }
@@ -137,19 +134,20 @@ void imageSubtraction(Mat h , Mat cropped_empty ,VideoCapture vid,double scale){
             break;
         }
     }
-    writeSomething(density, "a.csv");
+    writeSomething(density);
+
 }
 int main(int argc, char *argv[])
 {
     //open the video file for reading
-    if (argc <= 2)
+    if (argc <2)
     {
         cout << "enter argument as image name also \n ./main \"VideoName\" ";
     }
     string video_name = argv[1];
     video_name += ".mp4";
     VideoCapture vid(video_name);
-    double scale=stod(argv[2]);
+    // double scale=stod(argv[2]);
 
 
 
@@ -160,7 +158,7 @@ int main(int argc, char *argv[])
         return -1;
     }
     // selecting the points on traffic.jpg
-    //selectpoints(cnt);
+    selectpoints(cnt);
 
     // Four corners of the book in destination image.
     vector<Point2f> pts_dst;
@@ -169,7 +167,7 @@ int main(int argc, char *argv[])
     pts_dst.push_back(Point2f(800, 830));
     pts_dst.push_back(Point2f(800, 52));
 
-     vector<Point2f> pts_ds;
+    vector<Point2f> pts_ds;
     pts_ds.push_back(Point2f(947, 280));
     pts_ds.push_back(Point2f(468, 1065));
     pts_ds.push_back(Point2f(1542, 1066));
@@ -179,23 +177,23 @@ int main(int argc, char *argv[])
     Mat h = findHomography(pts_src, pts_dst);
 
     //Finding the empty frame
+    Mat cropped_empty = cropframe(imread("empty.jpg"), h);
+
+    // cropped_empty=reduce_ImgSize(cropped_empty);
+
+    time_t start, end;
+	time(&start);
+
+    imageSubtraction(h,cropped_empty,vid);
     
 
-    // cropped_empty=reduce_ImgSize(cropped_empty,scale);
-        Mat cropped_empty = cropframe(imread("empty.jpg"), h);
-        cropped_empty=reduce_ImgSize(cropped_empty,scale);
-        auto start = high_resolution_clock::now();
-
-        imageSubtraction(h, cropped_empty, vid, scale);
-
-        auto stop = high_resolution_clock::now();
-
-        auto duration = duration_cast<microseconds>(stop - start);
-
-        cout << "Time taken by function with scale down "<<scale<<": "
-             << duration.count() << " microseconds/ " << duration.count() / 1000000 << " sec" << endl;
-
+    time(&end);
+	double time_taken = double(end - start); 
+    cout << "Time taken by program is : " << fixed 
+         << time_taken << setprecision(5); 
+    cout << " sec " << endl;
     exit(1);
+
     waitKey(0);
 
     return 0;
